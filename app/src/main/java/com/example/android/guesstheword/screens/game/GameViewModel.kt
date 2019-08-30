@@ -8,17 +8,30 @@ import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
 import timber.log.Timber
 
+private val CORRECT_BUZZ_PATTERN = longArrayOf(100, 100, 100, 100, 100, 100)
+private val PANIC_BUZZ_PATTERN = longArrayOf(0, 200)
+private val GAME_OVER_BUZZ_PATTERN = longArrayOf(0, 1000)
+private val NO_BUZZ_PATTERN = longArrayOf(0)
+
 class GameViewModel : ViewModel() {
 
+    enum class BuzzType(val pattern: LongArray) {
+        CORRECT(CORRECT_BUZZ_PATTERN),
+        PANIC(PANIC_BUZZ_PATTERN),
+        GAME_OVER(GAME_OVER_BUZZ_PATTERN),
+        NO_BUZZ(NO_BUZZ_PATTERN)
+    }
 
     companion object {
         // These represent different important times
         // This is when the game is over
-        const val DONE = 0L
+        private const val DONE = 0L
         // This is the number of milliseconds in a second
-        const val ONE_SECOND = 1000L
+        private const val ONE_SECOND = 1000L
         // This is the total time of the game
-        const val COUNTDOWN_TIME = 10000L
+        private const val COUNTDOWN_TIME = 10000L
+        //The time when the phone will start buzzing to notify that time is running out
+        private const val COUNTDOWN_PANIC_SECONDS = 2000L
     }
 
     // The current word
@@ -31,14 +44,10 @@ class GameViewModel : ViewModel() {
     val score: LiveData<Int>
         get() = _score
 
-    private val _eventGameFinish = MutableLiveData<Boolean>()
-    val eventGameFinish: LiveData<Boolean>
-        get() = _eventGameFinish
-
     private val timer : CountDownTimer
 
     private val _currentTime = MutableLiveData<Long>()
-    val currentTime : LiveData<Long>
+    private val currentTime : LiveData<Long>
         get() = _currentTime
 
     val currentTimeString = Transformations.map(currentTime) { time ->
@@ -47,6 +56,14 @@ class GameViewModel : ViewModel() {
 
     // The list of words - the front of the list is the next word to guess
     private lateinit var wordList: MutableList<String>
+
+    private val _eventGameFinish = MutableLiveData<Boolean>()
+    val eventGameFinish: LiveData<Boolean>
+        get() = _eventGameFinish
+
+    private val _eventBuzz = MutableLiveData<BuzzType>()
+    val buzzType: LiveData<BuzzType>
+        get() = _eventBuzz
 
     init {
         Timber.i("GameViewModel initialised")
@@ -60,19 +77,17 @@ class GameViewModel : ViewModel() {
             override fun onTick(millisUntilFinished: Long) {
                 _currentTime.value = (millisUntilFinished/ ONE_SECOND)
                 Timber.i(millisUntilFinished.toString())
+                if (millisUntilFinished/ ONE_SECOND <= COUNTDOWN_PANIC_SECONDS) {
+                    _eventBuzz.value = BuzzType.PANIC
+                }
             }
             override fun onFinish() {
                 _currentTime.value = DONE
+                _eventBuzz.value = BuzzType.GAME_OVER
                 _eventGameFinish.value = true
             }
         }
         timer.start()
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        Timber.i("Timbeeeer! GameViewModel chopped down!")
-        timer.cancel()
     }
 
     /**
@@ -125,10 +140,21 @@ class GameViewModel : ViewModel() {
 
     fun onCorrect() {
         _score.value = (_score.value)?.plus(1)
+        _eventBuzz.value = BuzzType.CORRECT
         nextWord()
+    }
+
+    fun onBuzzComplete() {
+        _eventBuzz.value = BuzzType.NO_BUZZ
     }
 
     private fun onGameFinishComplete() {
         _eventGameFinish.value = false
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        Timber.i("Timbeeeer! GameViewModel chopped down!")
+        timer.cancel()
     }
 }
