@@ -36,7 +36,7 @@ import timber.log.Timber
 class GameFragment : Fragment() {
 
     private lateinit var binding: GameFragmentBinding
-    private lateinit var gameViewModel: GameViewModel
+    private lateinit var viewModel: GameViewModel
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
@@ -44,7 +44,7 @@ class GameFragment : Fragment() {
         Timber.i("Calling ViewModel")
 
         // Initialise the View Model
-        gameViewModel = ViewModelProviders.of(this).get(GameViewModel::class.java)
+        viewModel = ViewModelProviders.of(this).get(GameViewModel::class.java)
 
         // Inflate view and obtain an instance of the binding class
         binding = DataBindingUtil.inflate(
@@ -54,25 +54,21 @@ class GameFragment : Fragment() {
                 false
         )
 
-        binding.correctButton.setOnClickListener {
-            gameViewModel.onCorrect()
-        }
-        binding.skipButton.setOnClickListener {
-            gameViewModel.onSkip()
-        }
-        gameViewModel.score.observe(this, Observer { newScore ->
+        binding.gameViewModel = viewModel
+
+        viewModel.score.observe(this, Observer { newScore ->
             binding.scoreText.text = newScore.toString()
         })
-        gameViewModel.word.observe(this, Observer { newWord ->
+        viewModel.word.observe(this, Observer { newWord ->
             binding.wordText.text = newWord
         })
-        gameViewModel.currentTime.observe(this, Observer { newTime ->
+        viewModel.currentTime.observe(this, Observer { newTime ->
             binding.timerText.text = DateUtils.formatElapsedTime(newTime)
         })
-        gameViewModel.eventGameFinish.observe(this, Observer { hasFinished ->
+        viewModel.eventGameFinish.observe(this, Observer { hasFinished ->
             if (hasFinished) {
                 gameFinished()
-                gameViewModel.eventGameFinish
+                viewModel.eventGameFinish
             }
         })
         return binding.root
@@ -82,7 +78,7 @@ class GameFragment : Fragment() {
      * Called when the game is finished
      */
     private fun gameFinished() {
-        val action = GameFragmentDirections.actionGameToScore(gameViewModel.score.value!!
+        val action = GameFragmentDirections.actionGameToScore(viewModel.score.value!!
         )
         findNavController(this).navigate(action)
     }
