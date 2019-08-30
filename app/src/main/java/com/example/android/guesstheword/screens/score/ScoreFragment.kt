@@ -36,7 +36,7 @@ class ScoreFragment : Fragment() {
 
 
     private lateinit var viewModel: ScoreViewModel
-    private lateinit var scoreViewModelFactory: ScoreViewModelFactory
+    private lateinit var viewModelFactory: ScoreViewModelFactory
 
     override fun onCreateView(
             inflater: LayoutInflater,
@@ -54,17 +54,11 @@ class ScoreFragment : Fragment() {
 
         val scoreFragmentArgs by navArgs<ScoreFragmentArgs>()
 
-        scoreViewModelFactory = ScoreViewModelFactory(scoreFragmentArgs.score)
-        viewModel = ViewModelProviders.of(this, scoreViewModelFactory).get(ScoreViewModel::class.java)
+        viewModelFactory = ScoreViewModelFactory(scoreFragmentArgs.score)
+        viewModel = ViewModelProviders.of(this, viewModelFactory).get(ScoreViewModel::class.java)
 
         binding.scoreViewModel = viewModel
-
-        //Add and Observer for the score
-        viewModel.score.observe(this, Observer { newScore ->
-            binding.scoreText.text = newScore.toString()
-        })
-
-        binding.playAgainButton.setOnClickListener { viewModel.onPlayAgain() }
+        binding.setLifecycleOwner(this)
 
         // Navigates back to title when button is pressed
         viewModel.eventPlayAgain.observe(this, Observer { playAgain ->
